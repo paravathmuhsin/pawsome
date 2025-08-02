@@ -56,23 +56,24 @@ export const Navigation: React.FC = () => {
           gap: responsive.isMobile ? '5px' : '0',
           order: responsive.isMobile ? 2 : 0
         }}>
-          <Link to="/" style={linkStyle('/')}>
-            Home
-          </Link>
-          
-          <Link to="/adoption" style={linkStyle('/adoption')}>
-            Adoption
-          </Link>
-          
-          <Link to="/polls" style={linkStyle('/polls')}>
-            Polls
-          </Link>
-          
           {currentUser ? (
             <>
+              <Link to="/" style={linkStyle('/')}>
+                Home
+              </Link>
+              
+              <Link to="/adoption" style={linkStyle('/adoption')}>
+                Adoption
+              </Link>
+              
+              <Link to="/polls" style={linkStyle('/polls')}>
+                Polls
+              </Link>
+              
               <Link to="/profile" style={linkStyle('/profile')}>
                 Profile
               </Link>
+              
               <div style={{ 
                 marginLeft: responsive.isMobile ? '0' : '15px',
                 marginTop: responsive.isMobile ? '5px' : '0',
@@ -106,9 +107,20 @@ export const Navigation: React.FC = () => {
               </div>
             </>
           ) : (
-            <Link to="/auth" style={linkStyle('/auth')}>
-              Sign In
-            </Link>
+            <>
+              <Link to="/auth" style={linkStyle('/auth')}>
+                Sign In
+              </Link>
+              <div style={{
+                padding: getResponsiveValue('8px 12px', '9px 14px', '10px 15px', responsive),
+                margin: getResponsiveValue('0 2px', '0 3px', '0 5px', responsive),
+                color: '#999',
+                fontSize: getResponsiveValue('0.9rem', '0.95rem', '1rem', responsive),
+                fontStyle: 'italic'
+              }}>
+                Sign in to explore features
+              </div>
+            </>
           )}
         </div>
       </div>
