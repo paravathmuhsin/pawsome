@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Row, Col, Select, Space, Typography, Button, message, ConfigProvider, theme, DatePicker } from 'antd';
+import { Row, Col, Select, Space, Typography, Button, ConfigProvider, theme, DatePicker, App } from 'antd';
 import type { Event } from '../services/eventService';
 import { eventService } from '../services/eventService';
 import { EventCard } from '../components/EventCard';
@@ -9,8 +9,10 @@ import { useUserData } from '../hooks/useUserData';
 
 const { Title } = Typography;
 const { Option } = Select;
+const { useApp } = App;
 
 export const EventPage: React.FC = () => {
+  const { message } = useApp();
   const [events, setEvents] = useState<Event[]>([]);
   const [eventType, setEventType] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -19,17 +21,11 @@ export const EventPage: React.FC = () => {
   const { userData } = useUserData();
 
   const loadEvents = useCallback(async () => {
-    if (!currentUser) {
-      setEvents([]);
-      setIsLoading(false);
-      return;
-    }
-    
     setIsLoading(true);
     try {
       let loadedEvents: Event[] = [];
 
-      if (userData?.city && eventType === 'all') {
+      if (currentUser && userData?.city && eventType === 'all') {
         loadedEvents = await eventService.getEventsByLocation(userData.city);
       } else if (eventType !== 'all') {
         loadedEvents = await eventService.getEventsByType(eventType);
@@ -44,13 +40,11 @@ export const EventPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser, userData?.city, eventType]);
+  }, [currentUser, userData?.city, eventType, message]);
 
   useEffect(() => {
-    if (currentUser) {
-      loadEvents();
-    }
-  }, [loadEvents, currentUser]);
+    loadEvents();
+  }, [loadEvents]);
 
   const handleCreateEvent = async (eventData: Omit<Event, 'eventId' | 'createdAt'>) => {
     if (!currentUser) {
@@ -139,7 +133,7 @@ export const EventPage: React.FC = () => {
               </Select>
               
               <DatePicker 
-                onChange={(_date) => {
+                onChange={() => {
                   // TODO: Implement date filtering logic
                 }}
                 style={{

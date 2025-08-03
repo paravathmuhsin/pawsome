@@ -1,13 +1,12 @@
 import { collection, query, where, getDocs, addDoc, Timestamp } from 'firebase/firestore';
-import { db, auth } from '../firebase/config';
-import { onAuthStateChanged } from 'firebase/auth';
+import { db } from '../firebase/config';
 
 export interface Event {
   eventId?: string;
   title: string;
   description: string;
   date: Timestamp;
-  location: {
+  location?: {
     address: string;
     latitude: number;
     longitude: number;
@@ -29,16 +28,8 @@ const eventResponsesCollection = collection(db, 'eventResponses');
 
 export const eventService = {
   async createEvent(event: Omit<Event, 'eventId' | 'createdAt'>) {
-    // Remove undefined values to prevent Firestore errors
-    const cleanEvent = Object.entries(event).reduce((acc, [key, value]) => {
-      if (value !== undefined) {
-        acc[key] = value;
-      }
-      return acc;
-    }, {} as Record<string, any>);
-
     const eventData = {
-      ...cleanEvent,
+      ...event,
       createdAt: Timestamp.now(),
     };
     const docRef = await addDoc(eventsCollection, eventData);

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Modal, Form, Input, DatePicker, Select, Button, message } from 'antd';
+import { Modal, Form, Input, DatePicker, Select, Button, App } from 'antd';
 import type { Event } from '../services/eventService';
 import { LocationPicker } from './LocationPicker';
 import { useAuth } from '../hooks/useAuth';
 import { Timestamp } from 'firebase/firestore';
+
+const { useApp } = App;
 
 interface CreateEventModalProps {
   isOpen: boolean;
@@ -16,6 +18,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   onClose,
   onCreateEvent
 }) => {
+  const { message } = useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const { currentUser } = useAuth();
@@ -33,7 +36,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
   const handleSubmit = async () => {
     try {
-      if (!location.address) {
+      if (!location || !location.address) {
         setLocationError('Please select a location');
         return;
       }

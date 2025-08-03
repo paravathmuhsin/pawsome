@@ -11,9 +11,9 @@ interface EventCardProps {
 }
 
 export const EventCard: React.FC<EventCardProps> = ({ event, onRSVP }) => {
-  const formatDate = (date: any) => {
+  const formatDate = (date: Date | string | number | { seconds: number }): string => {
     if (!date) return 'Date not set';
-    if (date.seconds) {
+    if (typeof date === 'object' && 'seconds' in date) {
       return new Date(date.seconds * 1000).toLocaleDateString();
     }
     if (date instanceof Date) {
@@ -116,10 +116,12 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onRSVP }) => {
           <CalendarOutlined style={{ fontSize: '16px' }} />
           <Text style={{ fontSize: '14px' }}>{formatDate(event.date)}</Text>
         </Space>
-        <Space style={{ color: '#666' }}>
-          <EnvironmentOutlined style={{ fontSize: '16px' }} />
-          <Text style={{ fontSize: '14px' }}>{event.location.address}</Text>
-        </Space>
+        {event.location && (
+          <Space style={{ color: '#666' }}>
+            <EnvironmentOutlined style={{ fontSize: '16px' }} />
+            <Text style={{ fontSize: '14px' }}>{event.location.address}</Text>
+          </Space>
+        )}
         <Text 
           type="secondary" 
           style={{ 
