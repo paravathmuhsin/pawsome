@@ -7,6 +7,7 @@ import { AuthPage } from './pages/Auth';
 import { Profile } from './pages/Profile';
 import { AdoptionPage } from './pages/AdoptionPage';
 import { PollPage } from './pages/PollPage';
+import { EventPage } from './pages/EventPage';
 import './App.css';
 
 function App() {
@@ -43,6 +44,11 @@ function App() {
               <Route path="/profile" element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              } />
+              <Route path="/events" element={
+                <ProtectedRoute>
+                  <EventPage />
                 </ProtectedRoute>
               } />
             </Routes>

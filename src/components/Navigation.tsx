@@ -70,6 +70,10 @@ export const Navigation: React.FC = () => {
                 Polls
               </Link>
               
+              <Link to="/events" style={linkStyle('/events')}>
+                Events
+              </Link>
+              
               <Link to="/profile" style={linkStyle('/profile')}>
                 Profile
               </Link>

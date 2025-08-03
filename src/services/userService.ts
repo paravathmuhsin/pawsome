@@ -15,6 +15,7 @@ export interface UserData {
   displayName: string | null;
   photoURL: string | null;
   location: GeoLocation | null;
+  city?: string;
   createdAt: Timestamp;
   lastLoginAt: Timestamp;
   loginCount: number;
