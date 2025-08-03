@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Row, Col, Select, Space, Typography, Button, ConfigProvider, theme, DatePicker, App } from 'antd';
+import { Row, Col, Select, Space, Typography, Button, ConfigProvider, theme, DatePicker, App, Spin } from 'antd';
+import { CalendarOutlined, PlusOutlined, LoadingOutlined } from '@ant-design/icons';
 import type { Event } from '../services/eventService';
 import { eventService } from '../services/eventService';
-import { EventCard } from '../components/EventCard';
+import { EventListItem } from '../components/EventListItem';
 import { CreateEventModal } from '../components/CreateEventModal';
 import { useAuth } from '../hooks/useAuth';
 import { useUserData } from '../hooks/useUserData';
+import { useResponsive, getResponsiveValue } from '../hooks/useResponsive';
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -19,20 +21,26 @@ export const EventPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { currentUser } = useAuth();
   const { userData } = useUserData();
+  const responsive = useResponsive();
 
   const loadEvents = useCallback(async () => {
+    console.log('Loading events...');
     setIsLoading(true);
     try {
       let loadedEvents: Event[] = [];
 
       if (currentUser && userData?.city && eventType === 'all') {
+        console.log('Loading events by location:', userData.city);
         loadedEvents = await eventService.getEventsByLocation(userData.city);
       } else if (eventType !== 'all') {
+        console.log('Loading events by type:', eventType);
         loadedEvents = await eventService.getEventsByType(eventType);
       } else {
+        console.log('Loading all events');
         loadedEvents = await eventService.getAllEvents();
       }
 
+      console.log('Loaded events:', loadedEvents);
       setEvents(loadedEvents);
     } catch (error) {
       console.error('Error loading events:', error);
@@ -78,53 +86,86 @@ export const EventPage: React.FC = () => {
         userId: currentUser.uid,
         response
       });
-      message.success('RSVP updated successfully!');
+      // Silent success - no message
       loadEvents();
     } catch (error) {
       console.error('Error updating RSVP:', error);
+      // Only show error message for actual failures
       message.error('Failed to update RSVP. Please try again.');
     }
   };
 
   return (
     <ConfigProvider theme={{ algorithm: theme.defaultAlgorithm }}>
-      <div style={{ 
-        padding: '24px',
+      <div style={{
+        padding: getResponsiveValue('10px', '15px', '20px', responsive),
         maxWidth: '1200px',
         margin: '0 auto'
       }}>
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
+          {/* Header Section */}
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             marginBottom: '24px',
-            flexDirection: window.innerWidth < 768 ? 'column' : 'row',
-            gap: window.innerWidth < 768 ? '16px' : '0'
+            flexDirection: responsive.isMobile ? 'column' : 'row',
+            gap: responsive.isMobile ? '16px' : '0'
           }}>
-            <Title 
-              level={2}
-              style={{
+            <div>
+              <h1 style={{
                 margin: 0,
-                color: '#1a1a1a',
-                fontSize: '28px',
-                fontWeight: 600
-              }}
-            >
-              Events Near You
-            </Title>
-            
-            <Space size="middle">
-              <Button type="primary" onClick={() => setShowCreateModal(true)}>
-                Create Event
-              </Button>
+                fontSize: getResponsiveValue('1.8rem', '2rem', '2.2rem', responsive),
+                color: '#333',
+                textAlign: responsive.isMobile ? 'center' : 'left',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                <CalendarOutlined style={{ color: '#1890ff' }} /> Pet Events
+              </h1>
+              <p style={{
+                margin: '8px 0 0 0',
+                color: '#666',
+                fontSize: getResponsiveValue('14px', '15px', '16px', responsive),
+                textAlign: responsive.isMobile ? 'center' : 'left'
+              }}>
+                Join and create exciting pet-friendly events in your area
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              {currentUser && (
+                <Button 
+                  type="primary" 
+                  size="large"
+                  onClick={() => setShowCreateModal(true)}
+                  style={{
+                    background: '#1890ff',
+                    borderRadius: '8px',
+                    height: '40px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '0 20px',
+                    fontWeight: 500
+                  }}
+                  icon={<PlusOutlined />}
+                >
+                  Create Event
+                </Button>
+              )}
               <Select
                 value={eventType}
                 style={{ 
                   width: 180,
                   borderRadius: '8px'
                 }}
-                onChange={setEventType}
+                size="large"
+                onChange={(value) => {
+                  console.log('Selected event type:', value);
+                  setEventType(value);
+                }}
               >
                 <Option value="all">All Events</Option>
                 <Option value="walk">Pet Walks</Option>
@@ -136,32 +177,76 @@ export const EventPage: React.FC = () => {
                 onChange={() => {
                   // TODO: Implement date filtering logic
                 }}
+                size="large"
                 style={{
-                  borderRadius: '8px'
+                  borderRadius: '8px',
+                  width: '160px'
                 }}
                 placeholder="Filter by date"
               />
-            </Space>
+            </div>
           </div>
 
           {isLoading ? (
             <div style={{ 
               textAlign: 'center', 
-              padding: '48px 0' 
+              padding: '48px 0',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '16px'
             }}>
-              Loading events...
+              <div style={{ fontSize: '24px' }}>🐾</div>
+              <Space>
+                <Typography.Text type="secondary">Loading events</Typography.Text>
+                <Typography.Text type="secondary" style={{ animation: 'dots 1.4s infinite' }}>...</Typography.Text>
+              </Space>
+              <style>{`
+                @keyframes dots {
+                  0%, 20% { content: '.'; }
+                  40% { content: '..'; }
+                  60% { content: '...'; }
+                  80%, 100% { content: ''; }
+                }
+              `}</style>
             </div>
           ) : (
-            <Row gutter={[24, 24]}>
-              {events.map((event) => (
-                <Col xs={24} sm={12} md={8} lg={6} key={event.eventId}>
-                  <EventCard 
+            <div 
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px'
+              }}
+            >
+              {events.map((event, index) => (
+                <div
+                  key={event.eventId}
+                  style={{
+                    animation: `fadeInUp 0.3s ease forwards`,
+                    animationDelay: `${index * 0.1}s`,
+                    opacity: 0,
+                    transform: 'translateY(20px)'
+                  }}
+                >
+                  <EventListItem
                     event={event}
                     onRSVP={(response) => handleRSVP(event.eventId!, response)}
                   />
-                </Col>
+                </div>
               ))}
-            </Row>
+              <style>{`
+                @keyframes fadeInUp {
+                  from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                  }
+                  to {
+                    opacity: 1;
+                    transform: translateY(0);
+                  }
+                }
+              `}</style>
+            </div>
           )}
           
           {!isLoading && events.length === 0 && (
