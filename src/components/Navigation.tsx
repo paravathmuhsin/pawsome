@@ -2,11 +2,13 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useResponsive, getResponsiveValue } from '../hooks/useResponsive';
+import { useNotifications } from '../hooks/useNotifications';
 
 export const Navigation: React.FC = () => {
   const { currentUser } = useAuth();
   const location = useLocation();
   const responsive = useResponsive();
+  const { unreadCount } = useNotifications();
 
   const linkStyle = (path: string) => ({
     padding: getResponsiveValue('8px 12px', '9px 14px', '10px 15px', responsive),
@@ -72,6 +74,30 @@ export const Navigation: React.FC = () => {
               
               <Link to="/events" style={linkStyle('/events')}>
                 Events
+              </Link>
+              
+              <Link to="/notifications" style={{
+                ...linkStyle('/notifications'),
+                position: 'relative'
+              }}>
+                🔔 Notifications
+                {unreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-2px',
+                    right: '-2px',
+                    backgroundColor: '#dc3545',
+                    color: 'white',
+                    borderRadius: '50%',
+                    padding: '2px 6px',
+                    fontSize: '10px',
+                    fontWeight: 'bold',
+                    minWidth: '16px',
+                    textAlign: 'center'
+                  }}>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </Link>
               
               <Link to="/profile" style={linkStyle('/profile')}>

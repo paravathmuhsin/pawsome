@@ -91,3 +91,30 @@ export const calculateDistance = (
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 };
+
+// Check if a location is within a specified radius of user's location
+export const isWithinRadius = (
+  userLocation: GeoLocation,
+  itemLocation: GeoLocation,
+  radiusKm: number
+): boolean => {
+  const distance = calculateDistance(
+    userLocation.latitude,
+    userLocation.longitude,
+    itemLocation.latitude,
+    itemLocation.longitude
+  );
+  return distance <= radiusKm;
+};
+
+// Extract location from adoption post or event
+export const extractLocationFromPost = (post: { location?: { latitude?: number; longitude?: number; lat?: number; lng?: number } }): GeoLocation | null => {
+  if (post.location) {
+    return {
+      latitude: post.location.latitude || post.location.lat || 0,
+      longitude: post.location.longitude || post.location.lng || 0,
+      timestamp: Date.now()
+    };
+  }
+  return null;
+};

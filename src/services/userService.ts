@@ -9,6 +9,14 @@ export interface GeoLocation {
   accuracy?: number;
 }
 
+export interface NotificationSettings {
+  pushNotificationsEnabled: boolean;
+  adoptionNotifications: boolean;
+  eventNotifications: boolean;
+  notificationRadius: number; // in kilometers, default 50
+  deviceToken?: string; // For push notifications
+}
+
 export interface UserData {
   uid: string;
   email: string;
@@ -16,6 +24,7 @@ export interface UserData {
   photoURL: string | null;
   location: GeoLocation | null;
   city?: string;
+  notificationSettings: NotificationSettings;
   createdAt: Timestamp;
   lastLoginAt: Timestamp;
   loginCount: number;
@@ -47,6 +56,12 @@ export const createOrUpdateUser = async (user: User): Promise<void> => {
         displayName: user.displayName,
         photoURL: user.photoURL,
         location: null,
+        notificationSettings: {
+          pushNotificationsEnabled: true,
+          adoptionNotifications: true,
+          eventNotifications: true,
+          notificationRadius: 50 // Default 50km radius
+        },
         createdAt: serverTimestamp(),
         lastLoginAt: serverTimestamp(),
         loginCount: 1
@@ -84,6 +99,19 @@ export const updateUserLocation = async (uid: string, location: GeoLocation): Pr
     });
   } catch (error) {
     console.error('Error updating user location:', error);
+    throw error;
+  }
+};
+
+// Update user notification settings
+export const updateNotificationSettings = async (uid: string, settings: Partial<NotificationSettings>): Promise<void> => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, {
+      notificationSettings: settings
+    });
+  } catch (error) {
+    console.error('Error updating notification settings:', error);
     throw error;
   }
 };

@@ -1,5 +1,6 @@
 import { collection, query, where, getDocs, addDoc, Timestamp, doc, getDoc, updateDoc, deleteDoc, orderBy, limit, startAfter, type DocumentSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { notifyEligibleUsers } from './notificationService';
 
 export interface Event {
   eventId?: string;
@@ -35,6 +36,27 @@ export const eventService = {
       createdAt: Timestamp.now(),
     };
     const docRef = await addDoc(eventsCollection, eventData);
+    
+    // Trigger notifications for eligible users
+    try {
+      await notifyEligibleUsers(
+        {
+          id: docRef.id,
+          eventName: event.title,
+          description: event.description,
+          location: event.location ? {
+            latitude: event.location.latitude,
+            longitude: event.location.longitude
+          } : undefined,
+          createdBy: event.createdBy
+        },
+        'event'
+      );
+    } catch (notificationError) {
+      console.error('Error sending event notifications:', notificationError);
+      // Don't throw error - event creation should succeed even if notifications fail
+    }
+    
     return { ...eventData, eventId: docRef.id };
   },
 

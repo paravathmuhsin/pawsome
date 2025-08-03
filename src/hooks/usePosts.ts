@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getPosts, createPost, togglePostLike, deletePost, type Post, type CreatePostData } from '../services/postService';
 import { useAuth } from './useAuth';
-import { useInfiniteScroll } from './useInfiniteScroll';
 import type { DocumentSnapshot } from 'firebase/firestore';
 
 export const usePosts = () => {

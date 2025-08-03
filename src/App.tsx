@@ -13,6 +13,7 @@ const Home = lazy(() => import('./pages/Home').then(module => ({ default: module
 const AdoptionPage = lazy(() => import('./pages/AdoptionPage').then(module => ({ default: module.AdoptionPage })));
 const PollPage = lazy(() => import('./pages/PollPage').then(module => ({ default: module.PollPage })));
 const EventPage = lazy(() => import('./pages/EventPage').then(module => ({ default: module.EventPage })));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage').then(module => ({ default: module.NotificationsPage })));
 
 // Loading component
 const PageLoader = () => (
@@ -65,6 +66,11 @@ function App() {
                   <Route path="/profile" element={
                     <ProtectedRoute>
                       <Profile />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/notifications" element={
+                    <ProtectedRoute>
+                      <NotificationsPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/events" element={

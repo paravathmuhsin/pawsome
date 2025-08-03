@@ -2,6 +2,7 @@ import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useUserData } from '../hooks/useUserData';
 import { LocationUpdate } from '../components/LocationUpdate';
+import { NotificationSettingsComponent } from '../components/NotificationSettings';
 
 export const Profile: React.FC = () => {
   const { currentUser, logout } = useAuth();
@@ -94,6 +95,11 @@ export const Profile: React.FC = () => {
         <LocationUpdate 
           currentLocation={userData?.location || null}
           onLocationUpdated={refreshUserData}
+        />
+
+        <NotificationSettingsComponent
+          currentSettings={userData?.notificationSettings || null}
+          onSettingsUpdated={refreshUserData}
         />
         
         {userData && (

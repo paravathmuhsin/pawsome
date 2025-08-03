@@ -54,5 +54,18 @@ service cloud.firestore {
       allow update: if request.auth != null && request.auth.uid == resource.data.userId;
       allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
+
+    // Notifications collection rules
+    match /notifications/{notificationId} {
+      // Users can only read their own notifications
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      // Only the system can create notifications (via server-side functions or admin SDK)
+      // For now, allow authenticated users to create notifications (for testing)
+      allow create: if request.auth != null;
+      // Users can update their own notifications (mark as read)
+      allow update: if request.auth != null && request.auth.uid == resource.data.userId;
+      // Users can delete their own notifications
+      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
   }
 }

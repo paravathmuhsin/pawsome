@@ -16,6 +16,7 @@ import {
   type DocumentSnapshot 
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { notifyEligibleUsers } from './notificationService';
 
 export interface AdoptionPost {
   id: string;
@@ -86,6 +87,27 @@ export const createAdoptionPost = async (userId: string, adoptionData: CreateAdo
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
+    
+    // Trigger notifications for eligible users
+    try {
+      await notifyEligibleUsers(
+        {
+          id: adoptionRef.id,
+          petName: adoptionData.name,
+          description: adoptionData.description,
+          location: {
+            latitude: adoptionData.location.latitude,
+            longitude: adoptionData.location.longitude
+          },
+          createdBy: userId
+        },
+        'adoption'
+      );
+    } catch (notificationError) {
+      console.error('Error sending notifications:', notificationError);
+      // Don't throw error - post creation should succeed even if notifications fail
+    }
+    
     return adoptionRef.id;
   } catch (error) {
     console.error('Error creating adoption post:', error);
