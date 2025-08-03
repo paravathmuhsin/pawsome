@@ -4,7 +4,8 @@ import {
   requestNotificationPermission, 
   getUserNotifications,
   markNotificationAsRead,
-  setNotificationRefreshCallback,
+  setGlobalRefreshCallback,
+  initializeFCMMessageHandling,
   type NotificationData 
 } from '../services/notificationService';
 
@@ -35,10 +36,10 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
   // Check and request notification permission
   const checkPermission = useCallback(async () => {
-    const granted = await requestNotificationPermission();
+    const granted = await requestNotificationPermission(currentUser?.uid);
     setPermissionGranted(granted);
     return granted;
-  }, []);
+  }, [currentUser]);
 
   // Fetch user notifications
   const fetchNotifications = useCallback(async () => {
@@ -85,17 +86,20 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   }, [currentUser]);
 
-  // Set up global refresh callback
+  // Set up global refresh callback and initialize FCM
   useEffect(() => {
     if (currentUser) {
-      setNotificationRefreshCallback(refreshNotifications);
+      setGlobalRefreshCallback(refreshNotifications);
+      
+      // Initialize FCM message handling
+      initializeFCMMessageHandling();
     } else {
-      setNotificationRefreshCallback(null);
+      setGlobalRefreshCallback(() => {});
     }
 
     // Cleanup on unmount
     return () => {
-      setNotificationRefreshCallback(null);
+      setGlobalRefreshCallback(() => {});
     };
   }, [currentUser, refreshNotifications]);
 

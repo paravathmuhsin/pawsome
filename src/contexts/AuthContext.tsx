@@ -8,6 +8,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { createOrUpdateUser } from '../services/userService';
+import { cleanupFCMToken } from '../services/notificationService';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -39,6 +40,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async (): Promise<void> => {
+    // Clean up FCM token before signing out
+    if (currentUser) {
+      try {
+        await cleanupFCMToken(currentUser.uid);
+      } catch (error) {
+        console.error('Error cleaning up FCM token:', error);
+        // Continue with logout even if cleanup fails
+      }
+    }
+    
     await signOut(auth);
   };
 

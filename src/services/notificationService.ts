@@ -12,6 +12,13 @@ import {
 import { db } from '../firebase/config';
 import { getUserData, type GeoLocation } from './userService';
 import { isWithinRadius, extractLocationFromPost } from '../utils/geolocation';
+import { 
+  initializeFCM, 
+  requestFCMPermission, 
+  onForegroundMessage, 
+  deleteFCMToken,
+  isFCMSupported 
+} from './fcmService';
 
 // Global notification refresh callback (to be set by NotificationContext)
 let globalNotificationRefreshCallback: (() => Promise<void>) | null = null;
@@ -45,8 +52,52 @@ export interface NotificationData {
   delivered: boolean;
 }
 
-// Request notification permission
-export const requestNotificationPermission = async (): Promise<boolean> => {
+// Global refresh callback to update notification counts
+let globalRefreshCallback: (() => void) | null = null;
+
+export const setGlobalRefreshCallback = (callback: () => void): void => {
+  globalRefreshCallback = callback;
+};
+
+export const triggerNotificationRefresh = (): void => {
+  if (globalRefreshCallback) {
+    globalRefreshCallback();
+  }
+};
+
+// Request notification permission (now uses FCM)
+export const requestNotificationPermission = async (userId?: string): Promise<boolean> => {
+  // First check if FCM is supported
+  if (!isFCMSupported()) {
+    console.warn('FCM not supported, falling back to browser notifications');
+    return requestBrowserNotificationPermission();
+  }
+
+  try {
+    // Initialize FCM
+    const fcmInitialized = await initializeFCM();
+    if (!fcmInitialized) {
+      console.warn('FCM initialization failed, falling back to browser notifications');
+      return requestBrowserNotificationPermission();
+    }
+
+    // Request FCM permission and get token
+    if (userId) {
+      const token = await requestFCMPermission(userId);
+      return token !== null;
+    }
+
+    // If no userId provided, just check basic permission
+    const permission = await Notification.requestPermission();
+    return permission === 'granted';
+  } catch (error) {
+    console.error('Error requesting FCM permission:', error);
+    return requestBrowserNotificationPermission();
+  }
+};
+
+// Fallback browser notification permission
+const requestBrowserNotificationPermission = async (): Promise<boolean> => {
   if (!('Notification' in window)) {
     return false;
   }
@@ -89,6 +140,54 @@ export const showBrowserNotification = (title: string, body: string): void => {
 
   } catch (error) {
     console.error('Error creating notification:', error);
+  }
+};
+
+// Enhanced notification function with FCM support
+export const showNotification = async (title: string, body: string, userId?: string): Promise<void> => {
+  const hasPermission = await requestNotificationPermission(userId);
+  
+  if (!hasPermission) {
+    console.warn('Notification permission not granted');
+    return;
+  }
+
+  // Show the notification immediately
+  showBrowserNotification(title, body);
+};
+
+// Initialize FCM foreground message handling
+export const initializeFCMMessageHandling = async (): Promise<void> => {
+  try {
+    if (isFCMSupported()) {
+      await initializeFCM();
+      
+      // Set up foreground message handler
+      onForegroundMessage((payload) => {
+        console.log('Received foreground message:', payload);
+        
+        const { title, body } = payload.notification || {};
+        if (title && body) {
+          showBrowserNotification(title, body);
+        }
+        
+        // Trigger notification refresh
+        triggerNotificationRefresh();
+      });
+    }
+  } catch (error) {
+    console.error('Error initializing FCM message handling:', error);
+  }
+};
+
+// Cleanup FCM token when user logs out
+export const cleanupFCMToken = async (userId: string): Promise<void> => {
+  try {
+    if (isFCMSupported()) {
+      await deleteFCMToken(userId);
+    }
+  } catch (error) {
+    console.error('Error cleaning up FCM token:', error);
   }
 };
 
@@ -245,8 +344,8 @@ export const notifyEligibleUsers = async (
           delivered: false
         });
 
-        // Show browser notification
-        showBrowserNotification(title, body);
+        // Show notification (uses FCM when available)
+        await showNotification(title, body, userId);
       }
     });
 
@@ -274,17 +373,18 @@ export const markNotificationAsRead = async (notificationId: string): Promise<vo
 // Test function to create a sample notification (for development/testing)
 export const createTestNotification = async (userId: string): Promise<string> => {
   try {
-    // First check and request permission
-    const hasPermission = await requestNotificationPermission();
+    // First check and request permission (with FCM support)
+    const hasPermission = await requestNotificationPermission(userId);
     
     if (!hasPermission) {
       throw new Error('Notification permission not granted');
     }
     
-    // Show browser notification immediately
-    showBrowserNotification(
+    // Show notification with FCM support
+    await showNotification(
       '🧪 Test Notification',
-      'This is a test notification to verify the system is working correctly.'
+      'This is a test notification to verify the system is working correctly.',
+      userId
     );
     
     // Store in database
