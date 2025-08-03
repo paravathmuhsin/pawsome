@@ -1,7 +1,5 @@
 import React from 'react';
 import { useNotifications } from '../hooks/useNotifications';
-import { useAuth } from '../hooks/useAuth';
-import { createTestNotification } from '../services/notificationService';
 
 export const NotificationsDisplay: React.FC = () => {
   const { 
@@ -9,21 +7,8 @@ export const NotificationsDisplay: React.FC = () => {
     loading, 
     error, 
     unreadCount, 
-    markAsRead,
-    refreshNotifications
+    markAsRead
   } = useNotifications();
-  const { currentUser } = useAuth();
-
-  const handleCreateTestNotification = async () => {
-    if (!currentUser) return;
-    
-    try {
-      await createTestNotification(currentUser.uid);
-      await refreshNotifications();
-    } catch (error) {
-      console.error('Error creating test notification:', error);
-    }
-  };
 
   if (loading) {
     return (
@@ -85,21 +70,6 @@ export const NotificationsDisplay: React.FC = () => {
             </span>
           )}
         </h2>
-        
-        <button
-          onClick={handleCreateTestNotification}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#28a745',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}
-        >
-          🧪 Create Test
-        </button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

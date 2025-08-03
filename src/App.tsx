@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { App as AntApp, Spin } from 'antd';
 import { Suspense, lazy } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import { Navigation } from './components/Navigation';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthPage } from './pages/Auth';
@@ -34,19 +35,20 @@ function App() {
   return (
     <AntApp>
       <AuthProvider>
-        <Router future={{ v7_startTransition: true }}>
-          <div style={{ 
-            minHeight: '100vh', 
-            backgroundColor: '#f5f5f5',
-            width: '100%',
-            margin: 0,
-            padding: 0
-          }}>
-            <Navigation />
-            
-            <main>
-              <Suspense fallback={<PageLoader />}>
-                <Routes>
+        <NotificationProvider>
+          <Router future={{ v7_startTransition: true }}>
+            <div style={{ 
+              minHeight: '100vh', 
+              backgroundColor: '#f5f5f5',
+              width: '100%',
+              margin: 0,
+              padding: 0
+            }}>
+              <Navigation />
+              
+              <main>
+                <Suspense fallback={<PageLoader />}>
+                  <Routes>
                   <Route path="/" element={
                     <ProtectedRoute>
                       <Home />
@@ -94,7 +96,8 @@ function App() {
             </footer>
           </div>
         </Router>
-      </AuthProvider>
+      </NotificationProvider>
+    </AuthProvider>
     </AntApp>
   );
 }

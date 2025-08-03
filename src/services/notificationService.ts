@@ -13,6 +13,24 @@ import { db } from '../firebase/config';
 import { getUserData, type GeoLocation } from './userService';
 import { isWithinRadius, extractLocationFromPost } from '../utils/geolocation';
 
+// Global notification refresh callback (to be set by NotificationContext)
+let globalNotificationRefreshCallback: (() => Promise<void>) | null = null;
+
+export const setNotificationRefreshCallback = (callback: (() => Promise<void>) | null) => {
+  globalNotificationRefreshCallback = callback;
+};
+
+// Helper function to trigger global notification refresh
+const triggerGlobalRefresh = async () => {
+  if (globalNotificationRefreshCallback) {
+    try {
+      await globalNotificationRefreshCallback();
+    } catch (error) {
+      console.error('Error triggering global notification refresh:', error);
+    }
+  }
+};
+
 export interface NotificationData {
   id?: string;
   userId: string;
@@ -30,7 +48,6 @@ export interface NotificationData {
 // Request notification permission
 export const requestNotificationPermission = async (): Promise<boolean> => {
   if (!('Notification' in window)) {
-    console.warn('This browser does not support notifications');
     return false;
   }
 
@@ -47,15 +64,17 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
 };
 
 // Show browser notification
-export const showBrowserNotification = (title: string, body: string, icon?: string): void => {
-  if (Notification.permission === 'granted') {
+export const showBrowserNotification = (title: string, body: string): void => {
+  if (Notification.permission !== 'granted') {
+    return;
+  }
+
+  try {
     const notification = new Notification(title, {
       body,
-      icon: icon || '/favicon.ico',
-      badge: '/favicon.ico',
       tag: 'pawsome-notification',
       requireInteraction: false,
-      silent: false
+      silent: false,
     });
 
     // Auto close after 5 seconds
@@ -67,6 +86,9 @@ export const showBrowserNotification = (title: string, body: string, icon?: stri
       window.focus();
       notification.close();
     };
+
+  } catch (error) {
+    console.error('Error creating notification:', error);
   }
 };
 
@@ -78,6 +100,10 @@ export const storeNotification = async (notificationData: Omit<NotificationData,
       ...notificationData,
       createdAt: serverTimestamp()
     });
+    
+    // Trigger global refresh after storing notification
+    await triggerGlobalRefresh();
+    
     return docRef.id;
   } catch (error) {
     console.error('Error storing notification:', error);
@@ -236,6 +262,9 @@ export const markNotificationAsRead = async (notificationId: string): Promise<vo
   try {
     const notificationRef = doc(db, 'notifications', notificationId);
     await updateDoc(notificationRef, { read: true });
+    
+    // Trigger global refresh after marking as read
+    await triggerGlobalRefresh();
   } catch (error) {
     console.error('Error marking notification as read:', error);
     throw error;
@@ -245,7 +274,21 @@ export const markNotificationAsRead = async (notificationId: string): Promise<vo
 // Test function to create a sample notification (for development/testing)
 export const createTestNotification = async (userId: string): Promise<string> => {
   try {
-    return await storeNotification({
+    // First check and request permission
+    const hasPermission = await requestNotificationPermission();
+    
+    if (!hasPermission) {
+      throw new Error('Notification permission not granted');
+    }
+    
+    // Show browser notification immediately
+    showBrowserNotification(
+      '🧪 Test Notification',
+      'This is a test notification to verify the system is working correctly.'
+    );
+    
+    // Store in database
+    const notificationId = await storeNotification({
       userId,
       title: '🧪 Test Notification',
       body: 'This is a test notification to verify the system is working correctly.',
@@ -255,6 +298,8 @@ export const createTestNotification = async (userId: string): Promise<string> =>
       read: false,
       delivered: true
     });
+    
+    return notificationId;
   } catch (error) {
     console.error('Error creating test notification:', error);
     throw error;
