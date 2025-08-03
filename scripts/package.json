@@ -1,0 +1,7 @@
+{
+  "name": "pawsome-scripts",
+  "type": "module",
+  "dependencies": {
+    "firebase": "^12.0.0"
+  }
+}

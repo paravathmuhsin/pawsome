@@ -8,7 +8,7 @@ interface LocationData {
 }
 
 interface LocationPickerProps {
-  location: LocationData | null;
+  location?: LocationData;
   onLocationChange: (location: LocationData) => void;
   error?: string;
 }
@@ -16,16 +16,25 @@ interface LocationPickerProps {
 export const LocationPicker: React.FC<LocationPickerProps> = ({
   location,
   onLocationChange,
-  error
+  error: propError
 }) => {
   const [addressInput, setAddressInput] = useState(location?.address || '');
   const [isLoading, setIsLoading] = useState(false);
   const [mapUrl, setMapUrl] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string>();
   const responsive = useResponsive();
+
+  const formatLocation = (address: string, lat: number, lng: number): LocationData => {
+    return {
+      address,
+      latitude: lat,
+      longitude: lng
+    };
+  };
 
   const getCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by this browser.');
+      setLocalError('Geolocation is not supported by this browser.');
       return;
     }
 
@@ -42,16 +51,20 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
           
           if (response.ok) {
             const data = await response.json();
-            const address = data.display_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+            const address = data.address?.city || data.address?.town || data.address?.village || 'Unknown City';
             
-            const locationData = { address, latitude, longitude };
+            const locationData = formatLocation(address, latitude, longitude);
             onLocationChange(locationData);
             setAddressInput(address);
             updateMapUrl(latitude, longitude);
           } else {
             // Fallback to coordinates
             const address = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-            const locationData = { address, latitude, longitude };
+            const locationData = { 
+              address,
+              latitude,
+              longitude 
+            };
             onLocationChange(locationData);
             setAddressInput(address);
             updateMapUrl(latitude, longitude);
@@ -150,7 +163,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
           style={{
             flex: 1,
             padding: '8px',
-            border: error ? '1px solid #dc3545' : '1px solid #ccc',
+            border: (propError || localError) ? '1px solid #dc3545' : '1px solid #ccc',
             borderRadius: '4px'
           }}
         />
@@ -190,17 +203,17 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         </button>
       </div>
 
-      {error && (
+      {(propError || localError) && (
         <div style={{
           color: '#dc3545',
           fontSize: '14px',
           marginBottom: '12px'
         }}>
-          {error}
+          {propError || localError}
         </div>
       )}
 
-      {location && (
+          {location && (
         <div style={{
           backgroundColor: '#f8f9fa',
           padding: '12px',
@@ -218,9 +231,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
             📍 {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
           </div>
         </div>
-      )}
-
-      {mapUrl && (
+      )}      {mapUrl && (
         <div style={{
           border: '1px solid #ddd',
           borderRadius: '4px',

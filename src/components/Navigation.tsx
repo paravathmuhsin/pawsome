@@ -70,6 +70,10 @@ export const Navigation: React.FC = () => {
                 Polls
               </Link>
               
+              <Link to="/events" style={linkStyle('/events')}>
+                Events
+              </Link>
+              
               <Link to="/profile" style={linkStyle('/profile')}>
                 Profile
               </Link>
@@ -83,17 +87,21 @@ export const Navigation: React.FC = () => {
                 width: responsive.isMobile ? '100%' : 'auto',
                 justifyContent: responsive.isMobile ? 'center' : 'flex-start'
               }}>
-                {currentUser.photoURL && (
-                  <img 
-                    src={currentUser.photoURL} 
-                    alt="Profile" 
-                    style={{ 
-                      width: getResponsiveValue('28px', '30px', '32px', responsive),
-                      height: getResponsiveValue('28px', '30px', '32px', responsive),
-                      borderRadius: '50%' 
-                    }} 
-                  />
-                )}
+                <img 
+                  src={currentUser.photoURL || '/images/default-avatar.jpg'} 
+                  alt="Profile" 
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.onerror = null;
+                    target.src = '/images/default-avatar.jpg';
+                  }}
+                  style={{ 
+                    width: getResponsiveValue('28px', '30px', '32px', responsive),
+                    height: getResponsiveValue('28px', '30px', '32px', responsive),
+                    borderRadius: '50%',
+                    border: '1px solid #e0e0e0'
+                  }} 
+                />
                 <span style={{ 
                   fontSize: getResponsiveValue('12px', '13px', '14px', responsive),
                   color: '#666',

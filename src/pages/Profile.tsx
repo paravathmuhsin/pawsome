@@ -49,19 +49,22 @@ export const Profile: React.FC = () => {
         marginBottom: '20px'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-          {currentUser.photoURL && (
-            <img 
-              src={currentUser.photoURL} 
-              alt="Profile" 
-              style={{ 
-                width: '100px', 
-                height: '100px', 
-                borderRadius: '50%', 
-                marginBottom: '15px',
-                border: '3px solid #007bff'
-              }} 
-            />
-          )}
+          <img 
+            src={currentUser.photoURL || '/images/default-avatar.jpg'} 
+            alt="Profile" 
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.onerror = null;
+              target.src = '/images/default-avatar.jpg';
+            }}
+            style={{ 
+              width: '100px', 
+              height: '100px', 
+              borderRadius: '50%', 
+              marginBottom: '15px',
+              border: '3px solid #007bff'
+            }} 
+          />
         </div>
         
         <h3 style={{ marginBottom: '15px', color: '#007bff' }}>Firebase Auth Data:</h3>

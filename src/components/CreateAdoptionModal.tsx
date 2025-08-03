@@ -448,7 +448,7 @@ export const CreateAdoptionModal: React.FC<CreateAdoptionModalProps> = ({
 
           {/* Location */}
           <LocationPicker
-            location={formData.location.address ? formData.location : null}
+            location={formData.location.address ? formData.location : undefined}
             onLocationChange={handleLocationChange}
             error={error && !formData.location.address ? 'Please select a location' : undefined}
           />
