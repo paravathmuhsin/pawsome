@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   type Poll, 
   type CreatePollData,
@@ -10,28 +10,88 @@ import {
   deletePoll 
 } from '../services/pollService';
 import { useAuth } from './useAuth';
-import { type Timestamp } from 'firebase/firestore';
+import { type Timestamp, DocumentSnapshot } from 'firebase/firestore';
 
 export const usePolls = () => {
   const [polls, setPolls] = useState<Poll[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const { currentUser } = useAuth();
 
   // Fetch polls
-  const fetchPolls = async () => {
+  const fetchPolls = useCallback(async (reset = false) => {
     try {
-      setLoading(true);
+      if (reset) {
+        setPolls([]);
+        setLastDoc(null);
+        setHasMore(true);
+        setInitialLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+      
       setError(null);
-      const fetchedPolls = await getPolls();
-      setPolls(fetchedPolls);
+      const startAfter = reset ? undefined : lastDoc || undefined;
+      const fetchedPolls = await getPolls(10, startAfter);
+      
+      if (reset) {
+        setPolls(fetchedPolls.polls);
+      } else {
+        setPolls(prev => [...prev, ...fetchedPolls.polls]);
+      }
+
+      setLastDoc(fetchedPolls.lastDoc);
+      setHasMore(fetchedPolls.polls.length === 10 && fetchedPolls.lastDoc !== null);
     } catch (err) {
-      setError('Failed to load polls');
+      setError(reset ? 'Failed to load polls' : 'Failed to load more polls');
       console.error('Error fetching polls:', err);
     } finally {
-      setLoading(false);
+      if (reset) {
+        setInitialLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
     }
-  };
+  }, [lastDoc]);
+
+  // Load more polls for manual button
+  const loadMorePolls = useCallback(async () => {
+    if (!hasMore || loadingMore || initialLoading) {
+      console.log('❌ Skipping loadMore:', { hasMore, loadingMore, initialLoading });
+      return;
+    }
+    console.log('✅ Loading more polls...');
+    await fetchPolls(false);
+  }, [fetchPolls, hasMore, loadingMore, initialLoading]);
+
+  // Initial load
+  useEffect(() => {
+    const initialFetch = async () => {
+      try {
+        setInitialLoading(true);
+        setError(null);
+        
+        const result = await getPolls(10);
+        console.log('� Initial polls fetch:', result.polls.length, 'polls loaded');
+        setPolls(result.polls);
+        setLastDoc(result.lastDoc);
+        setHasMore(result.polls.length === 10 && result.lastDoc !== null);
+      } catch (err) {
+        setError('Failed to fetch polls');
+        console.error('Error fetching polls:', err);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    initialFetch();
+  }, []);
+
+  // Remove infinite scroll - using manual load more button instead
+  const isFetching = false;
 
   // Create a new poll
   const createNewPoll = async (pollData: CreatePollData) => {
@@ -44,7 +104,7 @@ export const usePolls = () => {
       const pollId = await createPoll(currentUser.uid, pollData);
       
       // Refresh the list to show the new poll
-      await fetchPolls();
+      await fetchPolls(true);
       return pollId;
     } catch (err) {
       setError('Failed to create poll');
@@ -169,19 +229,18 @@ export const usePolls = () => {
     }
   };
 
-  useEffect(() => {
-    fetchPolls();
-  }, []);
-
   return {
     polls,
-    loading,
+    loading: initialLoading,
+    loadingMore: loadingMore || isFetching,
     error,
+    hasMore,
     createNewPoll,
     votePoll,
     removeVote,
     closePollById,
     removePoll,
-    refreshPolls: fetchPolls
+    refreshPolls: () => fetchPolls(true),
+    loadMorePolls
   };
 };

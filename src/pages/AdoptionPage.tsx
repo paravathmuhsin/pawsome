@@ -11,11 +11,14 @@ export const AdoptionPage: React.FC = () => {
   const {
     adoptions,
     loading,
+    loadingMore,
     error,
+    hasMore,
     createNewAdoption,
     likeAdoption,
     toggleAdoptionInterest,
-    completeAdoption
+    completeAdoption,
+    loadMoreAdoptions
   } = useAdoptions();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const responsive = useResponsive();
@@ -210,25 +213,91 @@ export const AdoptionPage: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: responsive.isMobile 
-            ? '1fr' 
-            : responsive.isTablet 
-              ? 'repeat(2, 1fr)' 
-              : 'repeat(auto-fill, minmax(350px, 1fr))',
-          gap: getResponsiveValue('16px', '18px', '20px', responsive)
-        }}>
-          {adoptions.map((adoption) => (
-            <AdoptionCard
-              key={adoption.id}
-              adoption={adoption}
-              onLike={likeAdoption}
-              onInterest={toggleAdoptionInterest}
-              onComplete={completeAdoption}
-            />
-          ))}
-        </div>
+        <>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: responsive.isMobile 
+              ? '1fr' 
+              : responsive.isTablet 
+                ? 'repeat(2, 1fr)' 
+                : 'repeat(auto-fill, minmax(350px, 1fr))',
+            gap: getResponsiveValue('16px', '18px', '20px', responsive)
+          }}>
+            {adoptions.map((adoption) => (
+              <AdoptionCard
+                key={adoption.id}
+                adoption={adoption}
+                onLike={likeAdoption}
+                onInterest={toggleAdoptionInterest}
+                onComplete={completeAdoption}
+              />
+            ))}
+          </div>
+          
+          {/* Manual Load More Button */}
+          {hasMore && !loadingMore && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: '20px'
+            }}>
+              <button
+                onClick={loadMoreAdoptions}
+                style={{
+                  backgroundColor: '#667eea',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '12px 24px',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#5a67d8';
+                  (e.target as HTMLElement).style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.backgroundColor = '#667eea';
+                  (e.target as HTMLElement).style.transform = 'translateY(0)';
+                }}
+              >
+                🐾 Load More Pets
+              </button>
+            </div>
+          )}
+          
+          {/* Loading more indicator */}
+          {loadingMore && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: '20px',
+              color: '#667eea',
+              fontSize: '1rem'
+            }}>
+              Loading more pets...
+            </div>
+          )}
+          
+          {/* End of content indicator */}
+          {!hasMore && adoptions.length > 0 && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: '20px',
+              color: '#999',
+              fontSize: '0.9rem'
+            }}>
+              🎉 You've seen all the pets looking for homes!
+            </div>
+          )}
+        </>
       )}
 
       {/* Create Adoption Modal */}

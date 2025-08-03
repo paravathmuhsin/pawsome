@@ -11,8 +11,6 @@ interface EventListItemProps {
 }
 
 export const EventListItem: React.FC<EventListItemProps> = ({ event, onRSVP }) => {
-  console.log('Event data:', event);
-  console.log('Event date:', event.date);
   return (
     <div style={{
       display: 'flex',

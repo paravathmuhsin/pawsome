@@ -1,4 +1,4 @@
-import { collection, query, where, getDocs, addDoc, Timestamp, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, Timestamp, doc, getDoc, updateDoc, deleteDoc, orderBy, limit, startAfter, type DocumentSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 export interface Event {
@@ -56,12 +56,34 @@ export const eventService = {
     })) as Event[];
   },
 
-  async getAllEvents() {
-    const querySnapshot = await getDocs(eventsCollection);
-    return querySnapshot.docs.map(doc => ({
+  async getAllEvents(
+    limitCount: number = 10, 
+    lastDoc?: DocumentSnapshot
+  ): Promise<{ events: Event[]; lastDoc: DocumentSnapshot | null }> {
+    let q = query(
+      eventsCollection,
+      orderBy('createdAt', 'desc'),
+      limit(limitCount)
+    );
+
+    if (lastDoc) {
+      q = query(
+        eventsCollection,
+        orderBy('createdAt', 'desc'),
+        startAfter(lastDoc),
+        limit(limitCount)
+      );
+    }
+
+    const querySnapshot = await getDocs(q);
+    const events = querySnapshot.docs.map(doc => ({
       ...doc.data(),
       eventId: doc.id
     })) as Event[];
+    
+    const newLastDoc = querySnapshot.docs[querySnapshot.docs.length - 1] || null;
+    
+    return { events, lastDoc: newLastDoc };
   },
 
   async respondToEvent(response: EventResponse) {
@@ -105,7 +127,6 @@ export const eventService = {
       
       return docRef.id;
     } catch (error) {
-      console.error('Error in respondToEvent:', error);
       throw error;
     }
   },
@@ -121,21 +142,15 @@ export const eventService = {
         
         if (responseType === 'interested') {
           const newCount = Math.max(0, (eventData.interestedCount || 0) + change);
-          console.log(`Updating interested count: ${eventData.interestedCount || 0} + ${change} = ${newCount}`);
           updateData.interestedCount = newCount;
         } else {
           const newCount = Math.max(0, (eventData.goingCount || 0) + change);
-          console.log(`Updating going count: ${eventData.goingCount || 0} + ${change} = ${newCount}`);
           updateData.goingCount = newCount;
         }
         
         await updateDoc(eventRef, updateData);
-        console.log('Updated event counts:', updateData);
-      } else {
-        console.error('Event not found:', eventId);
       }
     } catch (error) {
-      console.error('Error updating event counts:', error);
       throw error;
     }
   },

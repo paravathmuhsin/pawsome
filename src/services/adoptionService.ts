@@ -8,10 +8,12 @@ import {
   query, 
   orderBy, 
   limit,
+  startAfter,
   arrayUnion,
   arrayRemove,
   serverTimestamp,
-  type Timestamp 
+  type Timestamp,
+  type DocumentSnapshot 
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
@@ -92,13 +94,25 @@ export const createAdoptionPost = async (userId: string, adoptionData: CreateAdo
 };
 
 // Get all adoption posts (available first)
-export const getAdoptionPosts = async (limitCount: number = 20): Promise<AdoptionPost[]> => {
+export const getAdoptionPosts = async (
+  limitCount: number = 10, 
+  lastDoc?: DocumentSnapshot
+): Promise<{ posts: AdoptionPost[]; lastDoc: DocumentSnapshot | null }> => {
   try {
-    const q = query(
+    let q = query(
       collection(db, 'adoptions'),
       orderBy('createdAt', 'desc'),
       limit(limitCount)
     );
+
+    if (lastDoc) {
+      q = query(
+        collection(db, 'adoptions'),
+        orderBy('createdAt', 'desc'),
+        startAfter(lastDoc),
+        limit(limitCount)
+      );
+    }
     
     const snapshot = await getDocs(q);
     const posts = snapshot.docs.map(doc => ({
@@ -107,12 +121,16 @@ export const getAdoptionPosts = async (limitCount: number = 20): Promise<Adoptio
     } as AdoptionPost));
     
     // Sort in JavaScript to put available pets first
-    return posts.sort((a, b) => {
+    const sortedPosts = posts.sort((a, b) => {
       if (a.isAvailable === b.isAvailable) {
         return 0; // Keep original order (already sorted by createdAt desc)
       }
       return a.isAvailable ? -1 : 1; // Available pets first
     });
+
+    const newLastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+    
+    return { posts: sortedPosts, lastDoc: newLastDoc };
   } catch (error) {
     console.error('Error fetching adoption posts:', error);
     throw error;

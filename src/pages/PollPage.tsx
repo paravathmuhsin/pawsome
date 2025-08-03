@@ -11,12 +11,15 @@ export const PollPage: React.FC = () => {
   const { 
     polls, 
     loading, 
+    loadingMore,
     error, 
+    hasMore,
     createNewPoll, 
     votePoll, 
     removeVote, 
     closePollById, 
-    removePoll 
+    removePoll,
+    loadMorePolls
   } = usePolls();
   
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -286,6 +289,7 @@ export const PollPage: React.FC = () => {
               fontWeight: 'bold'
             }}>
               {filteredPolls.length} poll{filteredPolls.length !== 1 ? 's' : ''} found
+              {filter === 'all' && ` (Total: ${polls.length})`}
             </div>
 
             {/* Poll List */}
@@ -299,6 +303,79 @@ export const PollPage: React.FC = () => {
                 onDelete={handleDeletePoll}
               />
             ))}
+            
+            {/* Manual Load More - Only show when filter is 'all' */}
+            {filter === 'all' && (
+              <>
+                {/* Manual Load More Button */}
+                {hasMore && !loadingMore && (
+                  <div style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    marginTop: '20px',
+                    textAlign: 'center',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
+                  }}>
+                    <button
+                      onClick={loadMorePolls}
+                      style={{
+                        backgroundColor: '#667eea',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '12px 24px',
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.target as HTMLElement).style.backgroundColor = '#5a67d8';
+                        (e.target as HTMLElement).style.transform = 'translateY(-1px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.target as HTMLElement).style.backgroundColor = '#667eea';
+                        (e.target as HTMLElement).style.transform = 'translateY(0)';
+                      }}
+                    >
+                      📊 Load More Polls
+                    </button>
+                  </div>
+                )}
+                
+                {/* Loading more indicator */}
+                {loadingMore && (
+                  <div style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    marginTop: '20px',
+                    textAlign: 'center',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
+                  }}>
+                    <div style={{ color: '#667eea', fontSize: '1rem' }}>Loading more polls...</div>
+                  </div>
+                )}
+                
+                {/* End of content indicator */}
+                {!hasMore && polls.length > 0 && (
+                  <div style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    marginTop: '20px',
+                    textAlign: 'center',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
+                  }}>
+                    <div style={{ color: '#999', fontSize: '0.9rem' }}>
+                      🎉 You've reached the end! No more polls to load.
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
 

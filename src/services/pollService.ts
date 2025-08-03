@@ -8,11 +8,14 @@ import {
   getDoc,
   query, 
   orderBy, 
+  limit,
+  startAfter,
   serverTimestamp, 
   arrayUnion, 
   arrayRemove,
   Timestamp,
-  type Timestamp as TimestampType
+  type Timestamp as TimestampType,
+  type DocumentSnapshot
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
@@ -83,18 +86,35 @@ export const createPoll = async (userId: string, pollData: CreatePollData): Prom
 };
 
 // Get all polls
-export const getPolls = async (): Promise<Poll[]> => {
+export const getPolls = async (
+  limitCount: number = 10, 
+  lastDoc?: DocumentSnapshot
+): Promise<{ polls: Poll[]; lastDoc: DocumentSnapshot | null }> => {
   try {
-    const pollsQuery = query(
+    let pollsQuery = query(
       collection(db, 'polls'),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
+      limit(limitCount)
     );
+
+    if (lastDoc) {
+      pollsQuery = query(
+        collection(db, 'polls'),
+        orderBy('createdAt', 'desc'),
+        startAfter(lastDoc),
+        limit(limitCount)
+      );
+    }
     
     const snapshot = await getDocs(pollsQuery);
-    return snapshot.docs.map(doc => ({
+    const polls = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     })) as Poll[];
+    
+    const newLastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+    
+    return { polls, lastDoc: newLastDoc };
   } catch (error) {
     console.error('Error fetching polls:', error);
     throw error;

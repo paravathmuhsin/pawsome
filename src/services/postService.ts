@@ -8,11 +8,13 @@ import {
   query, 
   orderBy, 
   limit,
+  startAfter,
   arrayUnion,
   arrayRemove,
   increment,
   serverTimestamp,
-  type Timestamp 
+  type Timestamp,
+  type DocumentSnapshot 
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
@@ -52,13 +54,25 @@ export const createPost = async (userId: string, postData: CreatePostData): Prom
 };
 
 // Get all posts (latest first)
-export const getPosts = async (limitCount: number = 20): Promise<Post[]> => {
+export const getPosts = async (
+  limitCount: number = 10, 
+  lastDoc?: DocumentSnapshot
+): Promise<{ posts: Post[]; lastDoc: DocumentSnapshot | null }> => {
   try {
-    const q = query(
+    let q = query(
       collection(db, 'posts'),
       orderBy('createdAt', 'desc'),
       limit(limitCount)
     );
+
+    if (lastDoc) {
+      q = query(
+        collection(db, 'posts'),
+        orderBy('createdAt', 'desc'),
+        startAfter(lastDoc),
+        limit(limitCount)
+      );
+    }
     
     const querySnapshot = await getDocs(q);
     const posts: Post[] = [];
@@ -70,7 +84,9 @@ export const getPosts = async (limitCount: number = 20): Promise<Post[]> => {
       } as Post);
     });
     
-    return posts;
+    const newLastDoc = querySnapshot.docs[querySnapshot.docs.length - 1] || null;
+    
+    return { posts, lastDoc: newLastDoc };
   } catch (error) {
     console.error('Error getting posts:', error);
     throw error;

@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { Row, Col, Select, Space, Typography, Button, ConfigProvider, theme, DatePicker, App, Spin } from 'antd';
-import { CalendarOutlined, PlusOutlined, LoadingOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
+import { Select, Space, Typography, Button, ConfigProvider, theme, DatePicker, App } from 'antd';
+import { CalendarOutlined, PlusOutlined } from '@ant-design/icons';
 import type { Event } from '../services/eventService';
-import { eventService } from '../services/eventService';
 import { EventListItem } from '../components/EventListItem';
 import { CreateEventModal } from '../components/CreateEventModal';
 import { useAuth } from '../hooks/useAuth';
+import { useEvents } from '../hooks/useEvents';
 import { useUserData } from '../hooks/useUserData';
 import { useResponsive, getResponsiveValue } from '../hooks/useResponsive';
 
@@ -15,44 +15,21 @@ const { useApp } = App;
 
 export const EventPage: React.FC = () => {
   const { message } = useApp();
-  const [events, setEvents] = useState<Event[]>([]);
   const [eventType, setEventType] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const { currentUser } = useAuth();
   const { userData } = useUserData();
   const responsive = useResponsive();
-
-  const loadEvents = useCallback(async () => {
-    console.log('Loading events...');
-    setIsLoading(true);
-    try {
-      let loadedEvents: Event[] = [];
-
-      if (currentUser && userData?.city && eventType === 'all') {
-        console.log('Loading events by location:', userData.city);
-        loadedEvents = await eventService.getEventsByLocation(userData.city);
-      } else if (eventType !== 'all') {
-        console.log('Loading events by type:', eventType);
-        loadedEvents = await eventService.getEventsByType(eventType);
-      } else {
-        console.log('Loading all events');
-        loadedEvents = await eventService.getAllEvents();
-      }
-
-      console.log('Loaded events:', loadedEvents);
-      setEvents(loadedEvents);
-    } catch (error) {
-      console.error('Error loading events:', error);
-      message.error('Failed to load events. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentUser, userData?.city, eventType, message]);
-
-  useEffect(() => {
-    loadEvents();
-  }, [loadEvents]);
+  
+  const {
+    events,
+    loading,
+    loadingMore,
+    hasMore,
+    createNewEvent,
+    handleRSVP,
+    loadMoreEvents
+  } = useEvents(eventType, userData?.city);
 
   const handleCreateEvent = async (eventData: Omit<Event, 'eventId' | 'createdAt'>) => {
     if (!currentUser) {
@@ -61,33 +38,27 @@ export const EventPage: React.FC = () => {
     }
     
     try {
-      await eventService.createEvent({
+      await createNewEvent({
         ...eventData,
         createdBy: currentUser.uid
       });
       message.success('Event created successfully!');
       setShowCreateModal(false);
-      loadEvents();
     } catch (error) {
       console.error('Error creating event:', error);
       message.error('Failed to create event. Please try again.');
     }
   };
 
-  const handleRSVP = async (eventId: string, response: 'interested' | 'going') => {
+  const handleEventRSVP = async (eventId: string, response: 'interested' | 'going') => {
     if (!currentUser) {
       message.error('You must be logged in to RSVP for events');
       return;
     }
 
     try {
-      await eventService.respondToEvent({
-        eventId,
-        userId: currentUser.uid,
-        response
-      });
+      await handleRSVP(eventId, response);
       // Silent success - no message
-      loadEvents();
     } catch (error) {
       console.error('Error updating RSVP:', error);
       // Only show error message for actual failures
@@ -163,7 +134,6 @@ export const EventPage: React.FC = () => {
                 }}
                 size="large"
                 onChange={(value) => {
-                  console.log('Selected event type:', value);
                   setEventType(value);
                 }}
               >
@@ -187,7 +157,7 @@ export const EventPage: React.FC = () => {
             </div>
           </div>
 
-          {isLoading ? (
+          {loading ? (
             <div style={{ 
               textAlign: 'center', 
               padding: '48px 0',
@@ -211,45 +181,94 @@ export const EventPage: React.FC = () => {
               `}</style>
             </div>
           ) : (
-            <div 
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '16px'
-              }}
-            >
-              {events.map((event, index) => (
-                <div
-                  key={event.eventId}
-                  style={{
-                    animation: `fadeInUp 0.3s ease forwards`,
-                    animationDelay: `${index * 0.1}s`,
-                    opacity: 0,
-                    transform: 'translateY(20px)'
-                  }}
-                >
-                  <EventListItem
-                    event={event}
-                    onRSVP={(response) => handleRSVP(event.eventId!, response)}
-                  />
+            <>
+              <div 
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px'
+                }}
+              >
+                {events.map((event, index) => (
+                  <div
+                    key={event.eventId}
+                    style={{
+                      animation: `fadeInUp 0.3s ease forwards`,
+                      animationDelay: `${index * 0.1}s`,
+                      opacity: 0,
+                      transform: 'translateY(20px)'
+                    }}
+                  >
+                    <EventListItem
+                      event={event}
+                      onRSVP={(response) => handleEventRSVP(event.eventId!, response)}
+                    />
+                  </div>
+                ))}
+                <style>{`
+                  @keyframes fadeInUp {
+                    from {
+                      opacity: 0;
+                      transform: translateY(20px);
+                    }
+                    to {
+                      opacity: 1;
+                      transform: translateY(0);
+                    }
+                  }
+                `}</style>
+              </div>
+              
+              {/* Manual Load More Button */}
+              {hasMore && !loadingMore && (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '20px'
+                }}>
+                  <Button 
+                    onClick={loadMoreEvents}
+                    type="primary"
+                    size="large"
+                    style={{
+                      background: '#1890ff',
+                      borderRadius: '8px',
+                      height: '40px',
+                      fontWeight: 500,
+                      boxShadow: '0 4px 12px rgba(24, 144, 255, 0.3)'
+                    }}
+                  >
+                    📅 Load More Events
+                  </Button>
                 </div>
-              ))}
-              <style>{`
-                @keyframes fadeInUp {
-                  from {
-                    opacity: 0;
-                    transform: translateY(20px);
-                  }
-                  to {
-                    opacity: 1;
-                    transform: translateY(0);
-                  }
-                }
-              `}</style>
-            </div>
+              )}
+              
+              {/* Loading more indicator */}
+              {loadingMore && (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '20px',
+                  color: '#1890ff'
+                }}>
+                  <Typography.Text>Loading more events...</Typography.Text>
+                </div>
+              )}
+              
+              {/* End of content indicator */}
+              {!hasMore && events.length > 0 && (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '20px',
+                  color: '#999'
+                }}>
+                  <Typography.Text type="secondary">
+                    🎉 You've seen all available events!
+                  </Typography.Text>
+                </div>
+              )}
+            </>
           )}
           
-          {!isLoading && events.length === 0 && (
+          {!loading && events.length === 0 && (
             <div style={{
               textAlign: 'center',
               padding: '48px 0',

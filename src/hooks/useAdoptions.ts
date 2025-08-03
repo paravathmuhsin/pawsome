@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   type AdoptionPost, 
   type CreateAdoptionData,
@@ -10,27 +10,88 @@ import {
   deleteAdoptionPost 
 } from '../services/adoptionService';
 import { useAuth } from './useAuth';
+import { DocumentSnapshot } from 'firebase/firestore';
 
 export const useAdoptions = () => {
   const [adoptions, setAdoptions] = useState<AdoptionPost[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const { currentUser } = useAuth();
 
   // Fetch adoption posts
-  const fetchAdoptions = async () => {
+  const fetchAdoptions = useCallback(async (reset = false) => {
     try {
-      setLoading(true);
+      if (reset) {
+        setAdoptions([]);
+        setLastDoc(null);
+        setHasMore(true);
+        setInitialLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+      
       setError(null);
-      const fetchedAdoptions = await getAdoptionPosts();
-      setAdoptions(fetchedAdoptions);
+      const startAfter = reset ? undefined : lastDoc || undefined;
+      const fetchedAdoptions = await getAdoptionPosts(9, startAfter);
+      
+      if (reset) {
+        setAdoptions(fetchedAdoptions.posts);
+      } else {
+        setAdoptions(prev => [...prev, ...fetchedAdoptions.posts]);
+      }
+
+      setLastDoc(fetchedAdoptions.lastDoc);
+      setHasMore(fetchedAdoptions.posts.length === 9 && fetchedAdoptions.lastDoc !== null);
     } catch (err) {
-      setError('Failed to load adoption posts');
+      setError(reset ? 'Failed to load adoption posts' : 'Failed to load more adoption posts');
       console.error('Error fetching adoptions:', err);
     } finally {
-      setLoading(false);
+      if (reset) {
+        setInitialLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
     }
-  };
+  }, [lastDoc]);
+
+  // Load more adoptions for manual button
+  const loadMoreAdoptions = useCallback(async () => {
+    if (!hasMore || loadingMore || initialLoading) {
+      console.log('❌ Skipping loadMore:', { hasMore, loadingMore, initialLoading });
+      return;
+    }
+    console.log('✅ Loading more adoptions...');
+    await fetchAdoptions(false);
+  }, [fetchAdoptions, hasMore, loadingMore, initialLoading]);
+
+  // Initial load
+  useEffect(() => {
+    const initialFetch = async () => {
+      try {
+        setInitialLoading(true);
+        setError(null);
+        
+        const result = await getAdoptionPosts(9);
+        console.log('📊 Initial adoption fetch:', result.posts.length, 'adoptions loaded');
+        setAdoptions(result.posts);
+        setLastDoc(result.lastDoc);
+        setHasMore(result.posts.length === 9 && result.lastDoc !== null);
+      } catch (err) {
+        setError('Failed to fetch adoption posts');
+        console.error('Error fetching adoptions:', err);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    initialFetch();
+  }, []);
+
+  // Remove infinite scroll - using manual load more button instead
+  const isFetching = false;
 
   // Create a new adoption post
   const createNewAdoption = async (adoptionData: CreateAdoptionData) => {
@@ -43,7 +104,7 @@ export const useAdoptions = () => {
       const adoptionId = await createAdoptionPost(currentUser.uid, adoptionData);
       
       // Refresh the list to show the new adoption
-      await fetchAdoptions();
+      await fetchAdoptions(true);
       return adoptionId;
     } catch (err) {
       setError('Failed to create adoption post');
@@ -144,19 +205,18 @@ export const useAdoptions = () => {
     }
   };
 
-  useEffect(() => {
-    fetchAdoptions();
-  }, []);
-
   return {
     adoptions,
-    loading,
+    loading: initialLoading,
+    loadingMore: loadingMore || isFetching,
     error,
+    hasMore,
     createNewAdoption,
     likeAdoption,
     toggleAdoptionInterest,
     completeAdoption,
     removeAdoption,
-    refreshAdoptions: fetchAdoptions
+    refreshAdoptions: () => fetchAdoptions(true),
+    loadMoreAdoptions
   };
 };

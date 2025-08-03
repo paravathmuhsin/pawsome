@@ -8,7 +8,7 @@ import { useResponsive, getResponsiveValue } from '../hooks/useResponsive';
 
 export const Home: React.FC = () => {
   const { currentUser } = useAuth();
-  const { posts, loading, error, createNewPost, likePost, removePost } = usePosts();
+  const { posts, loading, loadingMore, error, hasMore, createNewPost, likePost, removePost, loadMorePosts } = usePosts();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const responsive = useResponsive();
 
@@ -206,14 +206,81 @@ export const Home: React.FC = () => {
               </button>
             </div>
           ) : (
-            posts.map(post => (
-              <PostCard
-                key={post.id}
-                post={post}
-                onLike={() => likePost(post.id)}
-                onDelete={currentUser?.uid === post.createdBy ? () => removePost(post.id) : undefined}
-              />
-            ))
+            <>
+              {posts.map(post => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  onLike={() => likePost(post.id)}
+                  onDelete={currentUser?.uid === post.createdBy ? () => removePost(post.id) : undefined}
+                />
+              ))}
+              
+              {/* Manual Load More Button */}
+              {hasMore && !loadingMore && (
+                <div style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  textAlign: 'center',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+                }}>
+                  <button
+                    onClick={loadMorePosts}
+                    style={{
+                      backgroundColor: '#667eea',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '12px 24px',
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.target as HTMLElement).style.backgroundColor = '#5a67d8';
+                      (e.target as HTMLElement).style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.target as HTMLElement).style.backgroundColor = '#667eea';
+                      (e.target as HTMLElement).style.transform = 'translateY(0)';
+                    }}
+                  >
+                    📄 Load More Posts
+                  </button>
+                </div>
+              )}
+              
+              {/* Loading more indicator */}
+              {loadingMore && (
+                <div style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  textAlign: 'center',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+                }}>
+                  <div style={{ color: '#667eea', fontSize: '1rem' }}>Loading more posts...</div>
+                </div>
+              )}
+              
+              {/* End of content indicator */}
+              {!hasMore && posts.length > 0 && (
+                <div style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  textAlign: 'center',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+                }}>
+                  <div style={{ color: '#999', fontSize: '0.9rem' }}>
+                    🎉 You've reached the end! No more posts to load.
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
