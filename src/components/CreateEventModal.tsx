@@ -4,6 +4,7 @@ import type { Event } from '../services/eventService';
 import { LocationPicker } from './LocationPicker';
 import { useAuth } from '../hooks/useAuth';
 import { Timestamp } from 'firebase/firestore';
+import { validateImageUrl, validateTextContent, sanitizeInput } from '../utils/security';
 
 const { useApp } = App;
 
@@ -43,18 +44,31 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
       setLoading(true);
       const values = await form.validateFields();
       
+      // Security validation
+      if (!validateTextContent(values.title) || !validateTextContent(values.description)) {
+        message.error('Content contains inappropriate keywords');
+        setLoading(false);
+        return;
+      }
+      
+      if (values.imageUrl && !validateImageUrl(values.imageUrl)) {
+        message.error('Invalid or suspicious image URL');
+        setLoading(false);
+        return;
+      }
+      
       const eventData: Omit<Event, 'eventId' | 'createdAt'> = {
-        title: values.title,
-        description: values.description,
+        title: sanitizeInput(values.title),
+        description: sanitizeInput(values.description),
         date: Timestamp.fromDate(values.date.toDate()),
         location: location,
         eventType: values.eventType,
         createdBy: currentUser?.uid || 'system'
       };
 
-      // Only add imageUrl if it's not empty
-      if (values.imageUrl) {
-        eventData.imageUrl = values.imageUrl;
+      // Only add imageUrl if it's not empty and valid
+      if (values.imageUrl && validateImageUrl(values.imageUrl)) {
+        eventData.imageUrl = sanitizeInput(values.imageUrl);
       }
 
       await onCreateEvent(eventData);

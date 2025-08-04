@@ -1,50 +1,53 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Helper functions for security
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function validateString(value, minLen, maxLen) {
+      return value is string && value.size() >= minLen && value.size() <= maxLen;
+    }
+    
+    function isValidImageUrl(url) {
+      return url == null || (url is string && url.matches('https://.*\\.(jpg|jpeg|png|gif|webp).*'));
+    }
+
     // Users collection rules
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow read: if request.auth != null;
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId) && 
+        validateString(resource.data.email, 1, 100) &&
+        validateString(resource.data.displayName, 1, 50);
     }
 
-    // Posts collection rules
+    // Posts collection rules  
     match /posts/{postId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.createdBy;
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null && request.auth.uid == resource.data.createdBy;
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && 
+        isOwner(request.resource.data.createdBy) &&
+        validateString(request.resource.data.title, 1, 200) &&
+        validateString(request.resource.data.description, 1, 2000);
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated() && isOwner(resource.data.createdBy);
     }
 
-    // Top-level comments collection
-    match /comments/{commentId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
-      allow update: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
-    }
-
-    // Adoption posts collection rules
-    match /adoptions/{adoptionId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.createdBy;
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null && request.auth.uid == resource.data.createdBy;
-    }
-
-    // Polls collection rules
-    match /polls/{pollId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.createdBy;
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null && request.auth.uid == resource.data.createdBy;
-    }
-
-    // Events collection rules
+    // Enhanced Events collection rules
     match /events/{eventId} {
-      allow read: if true;  // Temporarily allow all reads for testing
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.createdBy;
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null && request.auth.uid == resource.data.createdBy;
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && 
+        isOwner(request.resource.data.createdBy) &&
+        validateString(request.resource.data.title, 1, 200) &&
+        validateString(request.resource.data.description, 1, 2000) &&
+        isValidImageUrl(request.resource.data.imageUrl) &&
+        request.resource.data.eventType in ['walk', 'adoption', 'training'];
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated() && isOwner(resource.data.createdBy);
     }
 
     // Event responses collection rules
