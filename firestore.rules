@@ -9,66 +9,93 @@ service cloud.firestore {
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
-    
-    function validateString(value, minLen, maxLen) {
-      return value is string && value.size() >= minLen && value.size() <= maxLen;
-    }
-    
-    function isValidImageUrl(url) {
-      return url == null || (url is string && url.matches('https://.*\\.(jpg|jpeg|png|gif|webp).*'));
-    }
 
     // Users collection rules
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow write: if isOwner(userId) && 
-        validateString(resource.data.email, 1, 100) &&
-        validateString(resource.data.displayName, 1, 50);
+      allow write: if isOwner(userId);
     }
 
     // Posts collection rules  
     match /posts/{postId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && 
-        isOwner(request.resource.data.createdBy) &&
-        validateString(request.resource.data.title, 1, 200) &&
-        validateString(request.resource.data.description, 1, 2000);
+      allow create: if isAuthenticated();
       allow update: if isAuthenticated();
       allow delete: if isAuthenticated() && isOwner(resource.data.createdBy);
     }
 
-    // Enhanced Events collection rules
+    // Events collection rules
     match /events/{eventId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && 
-        isOwner(request.resource.data.createdBy) &&
-        validateString(request.resource.data.title, 1, 200) &&
-        validateString(request.resource.data.description, 1, 2000) &&
-        isValidImageUrl(request.resource.data.imageUrl) &&
-        request.resource.data.eventType in ['walk', 'adoption', 'training'];
+      allow create: if isAuthenticated();
       allow update: if isAuthenticated();
       allow delete: if isAuthenticated() && isOwner(resource.data.createdBy);
     }
 
     // Event responses collection rules
     match /eventResponses/{responseId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
-      allow update: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && isOwner(resource.data.userId);
+      allow delete: if isAuthenticated() && isOwner(resource.data.userId);
+    }
+
+    // Comments collection rules
+    match /comments/{commentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && isOwner(resource.data.userId);
+      allow delete: if isAuthenticated() && isOwner(resource.data.userId);
+    }
+
+    // Polls collection rules
+    match /polls/{pollId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated() && isOwner(resource.data.createdBy);
+    }
+
+    // Poll votes collection rules
+    match /pollVotes/{voteId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && isOwner(resource.data.userId);
+      allow delete: if isAuthenticated() && isOwner(resource.data.userId);
+    }
+
+    // Adoption posts collection rules (using 'adoptions' collection name)
+    match /adoptions/{adoptionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated() && (
+        isOwner(resource.data.createdBy) || 
+        isOwner(resource.data.userId) ||
+        request.auth.uid == resource.data.createdBy ||
+        request.auth.uid == resource.data.userId
+      );
+    }
+
+    // Legacy adoption posts collection rules (keeping for compatibility)
+    match /adoptionPosts/{adoptionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated() && (
+        isOwner(resource.data.createdBy) || 
+        isOwner(resource.data.userId) ||
+        request.auth.uid == resource.data.createdBy ||
+        request.auth.uid == resource.data.userId
+      );
     }
 
     // Notifications collection rules
     match /notifications/{notificationId} {
-      // Users can only read their own notifications
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
-      // Only the system can create notifications (via server-side functions or admin SDK)
-      // For now, allow authenticated users to create notifications (for testing)
-      allow create: if request.auth != null;
-      // Users can update their own notifications (mark as read)
-      allow update: if request.auth != null && request.auth.uid == resource.data.userId;
-      // Users can delete their own notifications
-      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && isOwner(resource.data.userId);
+      allow delete: if isAuthenticated() && isOwner(resource.data.userId);
     }
   }
 }

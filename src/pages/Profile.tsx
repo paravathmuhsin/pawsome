@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useUserData } from '../hooks/useUserData';
 import { LocationUpdate } from '../components/LocationUpdate';
@@ -7,6 +7,7 @@ import { NotificationSettingsComponent } from '../components/NotificationSetting
 export const Profile: React.FC = () => {
   const { currentUser, logout } = useAuth();
   const { userData, loading, error, refreshUserData } = useUserData();
+  const [imageLoadError, setImageLoadError] = useState(false);
 
   // This should never happen since we're wrapped in ProtectedRoute, but adding for TypeScript
   if (!currentUser) {
@@ -16,8 +17,8 @@ export const Profile: React.FC = () => {
   const handleLogout = async () => {
     try {
       await logout();
-    } catch (error) {
-      console.error('Failed to log out:', error);
+    } catch {
+      // Handle logout error silently
     }
   };
 
@@ -50,22 +51,40 @@ export const Profile: React.FC = () => {
         marginBottom: '20px'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-          <img 
-            src={currentUser.photoURL || '/images/default-avatar.jpg'} 
-            alt="Profile" 
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.onerror = null;
-              target.src = '/images/default-avatar.jpg';
-            }}
-            style={{ 
-              width: '100px', 
-              height: '100px', 
-              borderRadius: '50%', 
-              marginBottom: '15px',
-              border: '3px solid #007bff'
-            }} 
-          />
+          {currentUser.photoURL && !imageLoadError ? (
+            <img 
+              src={currentUser.photoURL} 
+              alt="Profile" 
+              onError={() => setImageLoadError(true)}
+              style={{ 
+                width: '100px', 
+                height: '100px', 
+                borderRadius: '50%', 
+                marginBottom: '15px',
+                border: '3px solid #e0e0e0'
+              }} 
+            />
+          ) : (
+            <div
+              style={{
+                width: '100px',
+                height: '100px',
+                borderRadius: '50%',
+                backgroundColor: '#007bff',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '36px',
+                fontWeight: 'bold',
+                marginBottom: '15px',
+                border: '3px solid #e0e0e0',
+                margin: '0 auto 15px auto'
+              }}
+            >
+              {(currentUser.displayName || currentUser.email || 'U').charAt(0).toUpperCase()}
+            </div>
+          )}
         </div>
         
         <h3 style={{ marginBottom: '15px', color: '#007bff' }}>Firebase Auth Data:</h3>

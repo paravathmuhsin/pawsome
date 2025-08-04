@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useResponsive, getResponsiveValue } from '../hooks/useResponsive';
@@ -9,6 +9,7 @@ export const Navigation: React.FC = () => {
   const location = useLocation();
   const responsive = useResponsive();
   const { unreadCount } = useNotifications();
+  const [imageLoadError, setImageLoadError] = useState(false);
 
   const linkStyle = (path: string) => ({
     padding: getResponsiveValue('8px 12px', '9px 14px', '10px 15px', responsive),
@@ -113,21 +114,37 @@ export const Navigation: React.FC = () => {
                 width: responsive.isMobile ? '100%' : 'auto',
                 justifyContent: responsive.isMobile ? 'center' : 'flex-start'
               }}>
-                <img 
-                  src={currentUser.photoURL || '/images/default-avatar.jpg'} 
-                  alt="Profile" 
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.onerror = null;
-                    target.src = '/images/default-avatar.jpg';
-                  }}
-                  style={{ 
-                    width: getResponsiveValue('28px', '30px', '32px', responsive),
-                    height: getResponsiveValue('28px', '30px', '32px', responsive),
-                    borderRadius: '50%',
-                    border: '1px solid #e0e0e0'
-                  }} 
-                />
+                {currentUser.photoURL && !imageLoadError ? (
+                  <img 
+                    src={currentUser.photoURL} 
+                    alt="Profile" 
+                    onError={() => setImageLoadError(true)}
+                    style={{ 
+                      width: getResponsiveValue('28px', '30px', '32px', responsive),
+                      height: getResponsiveValue('28px', '30px', '32px', responsive),
+                      borderRadius: '50%',
+                      border: '1px solid #e0e0e0'
+                    }} 
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: getResponsiveValue('28px', '30px', '32px', responsive),
+                      height: getResponsiveValue('28px', '30px', '32px', responsive),
+                      borderRadius: '50%',
+                      backgroundColor: '#007bff',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: getResponsiveValue('12px', '13px', '14px', responsive),
+                      fontWeight: 'bold',
+                      border: '1px solid #e0e0e0'
+                    }}
+                  >
+                    {(currentUser.displayName || currentUser.email || 'U').charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <span style={{ 
                   fontSize: getResponsiveValue('12px', '13px', '14px', responsive),
                   color: '#666',
