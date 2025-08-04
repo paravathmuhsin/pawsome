@@ -28,6 +28,8 @@ export interface UserData {
   createdAt: Timestamp;
   lastLoginAt: Timestamp;
   loginCount: number;
+  fcmToken?: string | null;
+  fcmTokenUpdatedAt?: Timestamp | null;
 }
 
 // Create or update user document in Firestore

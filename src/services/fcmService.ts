@@ -164,7 +164,7 @@ export const storeFCMNotification = async (notificationData: {
   userId: string;
   title: string;
   body: string;
-  type: 'adoption' | 'event';
+  type: 'adoption' | 'event' | 'like';
   postId: string;
   data?: Record<string, string>;
 }): Promise<string> => {
@@ -182,6 +182,44 @@ export const storeFCMNotification = async (notificationData: {
   } catch (error) {
     console.error('Error storing FCM notification:', error);
     throw error;
+  }
+};
+
+// Send FCM push notification to a specific user
+export const sendPushNotification = async (
+  userId: string,
+  title: string,
+  body: string,
+  data?: Record<string, string>
+): Promise<boolean> => {
+  try {
+    // Store notification in Firestore first
+    const notificationData = {
+      userId,
+      title,
+      body,
+      type: (data?.type as 'adoption' | 'event' | 'like') || 'like',
+      postId: data?.postId || '',
+      data
+    };
+    
+    await storeFCMNotification(notificationData);
+    
+    // Create a document in fcmNotifications collection to trigger the cloud function
+    const fcmNotificationsRef = collection(db, 'fcmNotifications');
+    await addDoc(fcmNotificationsRef, {
+      userId,
+      title,
+      body,
+      data: data || {},
+      createdAt: serverTimestamp(),
+      processed: false
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error sending push notification:', error);
+    return false;
   }
 };
 

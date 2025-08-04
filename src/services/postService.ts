@@ -3,6 +3,7 @@ import {
   doc, 
   addDoc, 
   getDocs, 
+  getDoc,
   updateDoc, 
   deleteDoc, 
   query, 
@@ -17,6 +18,8 @@ import {
   type DocumentSnapshot 
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { sendPushNotification } from './fcmService';
+import { getUserData } from './userService';
 
 export interface Post {
   id: string;
@@ -98,16 +101,15 @@ export const togglePostLike = async (postId: string, userId: string): Promise<vo
   try {
     const postRef = doc(db, 'posts', postId);
     
-    // First, get the current post to check if user already liked it
-    const postDoc = await getDocs(query(collection(db, 'posts')));
-    let isLiked = false;
+    // Get the current post to check if user already liked it and get post data
+    const postDoc = await getDoc(postRef);
+    if (!postDoc.exists()) {
+      throw new Error('Post not found');
+    }
     
-    postDoc.forEach((doc) => {
-      if (doc.id === postId) {
-        const data = doc.data();
-        isLiked = data.likes?.includes(userId) || false;
-      }
-    });
+    const postData = postDoc.data() as Post;
+    const isLiked = postData.likes?.includes(userId) || false;
+    const postOwnerId = postData.createdBy;
     
     if (isLiked) {
       // Remove like
@@ -121,6 +123,31 @@ export const togglePostLike = async (postId: string, userId: string): Promise<vo
         likes: arrayUnion(userId),
         updatedAt: serverTimestamp()
       });
+      
+      // Send push notification to post owner (only when adding a like, not removing)
+      if (postOwnerId !== userId) { // Don't notify yourself
+        try {
+          // Get user data for the liker's name
+          const likerData = await getUserData(userId);
+          const likerName = likerData?.displayName || 'Someone';
+          
+          // Send push notification
+          await sendPushNotification(
+            postOwnerId,
+            '❤️ New Like!',
+            `${likerName} liked your post`,
+            {
+              type: 'like',
+              postId: postId,
+              likerId: userId,
+              likerName: likerName
+            }
+          );
+        } catch (notificationError) {
+          console.error('Error sending like notification:', notificationError);
+          // Don't throw here - the like should still work even if notification fails
+        }
+      }
     }
   } catch (error) {
     console.error('Error toggling like:', error);

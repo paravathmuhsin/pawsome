@@ -43,7 +43,7 @@ export interface NotificationData {
   userId: string;
   title: string;
   body: string;
-  type: 'adoption' | 'event';
+  type: 'adoption' | 'event' | 'like';
   postId: string;
   postLocation?: GeoLocation;
   distance?: number; // Distance in km from user's location

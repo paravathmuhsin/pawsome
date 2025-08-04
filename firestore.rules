@@ -97,5 +97,11 @@ service cloud.firestore {
       allow update: if isAuthenticated() && isOwner(resource.data.userId);
       allow delete: if isAuthenticated() && isOwner(resource.data.userId);
     }
+
+    // FCM Notifications collection rules (for cloud functions)
+    match /fcmNotifications/{notificationId} {
+      allow create: if isAuthenticated();
+      allow read, update: if false; // Only cloud functions should read/update
+    }
   }
 }

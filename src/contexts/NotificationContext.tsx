@@ -5,6 +5,7 @@ import {
   getUserNotifications,
   markNotificationAsRead,
   setGlobalRefreshCallback,
+  triggerNotificationRefresh,
   initializeFCMMessageHandling,
   type NotificationData 
 } from '../services/notificationService';
@@ -61,11 +62,34 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   // Mark notification as read
   const markAsRead = useCallback(async (notificationId: string) => {
     try {
+      // Optimistic update - immediately update local state
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === notificationId 
+            ? { ...notification, read: true }
+            : notification
+        )
+      );
+
+      // Update in database
       await markNotificationAsRead(notificationId);
-      // Don't update local state here - let the global refresh handle it
-      // This ensures consistency between database and UI
+      
+      // Trigger global refresh for consistency (but don't wait for it)
+      setTimeout(() => {
+        triggerNotificationRefresh();
+      }, 100);
+      
     } catch (err) {
       console.error('Error marking notification as read:', err);
+      
+      // If database update failed, revert the optimistic update
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === notificationId 
+            ? { ...notification, read: false }
+            : notification
+        )
+      );
     }
   }, []);
 
