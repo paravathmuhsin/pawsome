@@ -2,12 +2,12 @@
 importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js');
 
-// Firebase configuration - these values will be replaced during build
+// Firebase configuration - loaded from environment variables
 const firebaseConfig = {
   apiKey: "AIzaSyCDYbrnPQan84ZmKJPZ5gZ2mbw-ccr3f9Q",
-  authDomain: "pawsome-40415.firebaseapp.com",
-  projectId: "pawsome-40415",
-  storageBucket: "pawsome-40415.firebasestorage.app",
+  authDomain: "pawsome-new.firebaseapp.com",
+  projectId: "pawsome-new",
+  storageBucket: "pawsome-new.firebasestorage.app",
   messagingSenderId: "938394526676",
   appId: "1:938394526676:web:3efd64e20e92429ada6c41"
 };
