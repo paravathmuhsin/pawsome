@@ -4,6 +4,7 @@ import {
   onAuthStateChanged, 
   signOut,
   GoogleAuthProvider,
+  GithubAuthProvider,
   signInWithPopup
 } from 'firebase/auth';
 import { auth } from '../firebase/config';
@@ -14,6 +15,7 @@ interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
+  signInWithGithub: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -31,6 +33,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signInWithGoogle = async (): Promise<void> => {
     const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    
+    // Save user data to Firestore
+    if (result.user) {
+      await createOrUpdateUser(result.user);
+    }
+  };
+
+  const signInWithGithub = async (): Promise<void> => {
+    const provider = new GithubAuthProvider();
     const result = await signInWithPopup(auth, provider);
     
     // Save user data to Firestore
@@ -76,6 +88,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     currentUser,
     loading,
     signInWithGoogle,
+    signInWithGithub,
     logout
   };
 
