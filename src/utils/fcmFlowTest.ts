@@ -1,5 +1,5 @@
 // Comprehensive FCM Flow Test
-import { collection, addDoc, serverTimestamp, query, where, getDocs, getDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, getDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase/config';
 import { sendPushNotification } from '../services/fcmService';
 import { getUserData } from '../services/userService';
