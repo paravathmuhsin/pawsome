@@ -1,4 +1,6 @@
 import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { onSnapshot, query, collection, where, orderBy } from 'firebase/firestore';
+import { db } from '../firebase/config';
 import { useAuth } from '../hooks/useAuth';
 import { 
   requestNotificationPermission, 
@@ -17,7 +19,6 @@ interface NotificationContextType {
   permissionGranted: boolean;
   unreadCount: number;
   checkPermission: () => Promise<boolean>;
-  fetchNotifications: () => Promise<void>;
   markAsRead: (notificationId: string) => Promise<void>;
   refreshNotifications: () => Promise<void>;
 }
@@ -40,23 +41,6 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     const granted = await requestNotificationPermission(currentUser?.uid);
     setPermissionGranted(granted);
     return granted;
-  }, [currentUser]);
-
-  // Fetch user notifications
-  const fetchNotifications = useCallback(async () => {
-    if (!currentUser) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-      const userNotifications = await getUserNotifications(currentUser.uid);
-      setNotifications(userNotifications);
-    } catch (err) {
-      setError('Failed to fetch notifications');
-      console.error('Error fetching notifications:', err);
-    } finally {
-      setLoading(false);
-    }
   }, [currentUser]);
 
   // Mark notification as read
@@ -127,22 +111,62 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     };
   }, [currentUser, refreshNotifications]);
 
-  // Check permission and fetch notifications on mount
+  // Set up real-time notification listener
   useEffect(() => {
-    const initializeNotifications = async () => {
-      if (currentUser) {
-        await checkPermission();
-        await fetchNotifications();
-      } else {
-        // Clear notifications when user logs out
-        setNotifications([]);
+    if (!currentUser) {
+      setNotifications([]);
+      setError(null);
+      setPermissionGranted(false);
+      return;
+    }
+
+    let unsubscribe: (() => void) | null = null;
+
+    const setupNotificationListener = async () => {
+      try {
+        setLoading(true);
         setError(null);
-        setPermissionGranted(false);
+        
+        // Set up real-time listener for notifications
+        const notificationsQuery = query(
+          collection(db, 'notifications'),
+          where('userId', '==', currentUser.uid),
+          orderBy('createdAt', 'desc')
+        );
+        
+        unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
+          const notifications = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as NotificationData[];
+          
+          setNotifications(notifications);
+          setLoading(false);
+        }, (error) => {
+          console.error('Error fetching notifications:', error);
+          setError('Failed to fetch notifications');
+          setLoading(false);
+        });
+        
+        // Check and request permission
+        await checkPermission();
+        
+      } catch (err) {
+        setError('Failed to fetch notifications');
+        console.error('Error setting up notifications listener:', err);
+        setLoading(false);
       }
     };
 
-    initializeNotifications();
-  }, [currentUser, checkPermission, fetchNotifications]);
+    setupNotificationListener();
+
+    // Cleanup function
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [currentUser, checkPermission]);
 
   // Count unread notifications
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -154,7 +178,6 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     permissionGranted,
     unreadCount,
     checkPermission,
-    fetchNotifications,
     markAsRead,
     refreshNotifications
   };

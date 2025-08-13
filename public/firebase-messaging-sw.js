@@ -2,15 +2,8 @@
 importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js');
 
-// Static Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyCDYbrnPQan84ZmKJPZ5gZ2mbw-ccr3f9Q",
-  authDomain: "pawsome-40415.firebaseapp.com", 
-  projectId: "pawsome-40415",
-  storageBucket: "pawsome-40415.firebasestorage.app",
-  messagingSenderId: "938394526676",
-  appId: "1:938394526676:web:3efd64e20e92429ada6c41"
-};
+// Get Firebase configuration from environment variables (injected by Vite)
+const firebaseConfig = __FIREBASE_CONFIG__;
 
 // Initialize Firebase immediately
 const app = firebase.initializeApp(firebaseConfig);
