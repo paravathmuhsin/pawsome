@@ -4,7 +4,7 @@ A modern, responsive community platform for pet lovers built with React, TypeScr
 
 ## 🌟 Live Demo
 
-**🚀 [Visit Pawsome](https://pawsome-40415.web.app)**
+**🚀 [Visit Pawsome](https://pawsome-sigma.vercel.app)**
 
 ## ✨ Features
 
